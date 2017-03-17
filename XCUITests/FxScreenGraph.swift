@@ -172,6 +172,7 @@ func createScreenGraph(_ app: XCUIApplication, url: String = "https://www.mozill
         scene.tap(table.cells["Logins"], to: LoginsSettings)
         scene.tap(table.cells["ClearPrivateData"], to: ClearPrivateDataSettings)
         scene.tap(table.cells["OpenWith.Setting"], to: OpenWithSettings)
+        scene.tap(table.cells["ShowTour"], to: Intro_Organize)
 
         scene.backAction = navigationControllerBackAction
     }
@@ -332,4 +333,35 @@ extension Navigator {
             self.goto(TabTray)
         }
     }
+
+    func selectOptionFromBrowserTabMenu(view: selectMenuOption) {
+        self.goto(BrowserTabMenu)
+        let app = XCUIApplication()
+        if  app.collectionViews.cells[view.rawValue].exists {
+            app.collectionViews.cells[view.rawValue].tap()
+        } else {
+            self.goto(BrowserTabMenu2)
+            app.collectionViews.cells[view.rawValue].tap()
+        }
+    }
+}
+enum selectMenuOption: String {
+    // BrowserTabMenu Page 1
+    case requestDesktop = "RequestDesktopMenuItem"
+    case requestMobile = "RequestMobileMenuItem"
+    case findInPageOption = "FindInPageMenuItem"
+    case requestSetHomePage = "SetHomePageMenuItem"
+    case addBookmarkOption  = "AddBookmarkMenuItem"
+    case removeBookmarkOption = "RemoveBookmarkMenuItem"
+    // These two cases below added for completeness and to check a particular use case, like that the button works and takes to the correct place, but do NOT use them in a complex test case, use the other way (navigator.goto(....)) to open a new tab/new private tab
+    case openNewTabOption = "NewTabMenuItem"
+    case openNewPrivateTabOption = "NewPrivateTabMenuItem"
+
+    // BrowserTabMenu Page 2
+    case requestNightMode = "HideNightModeItem"
+    case requestDayMode = "ShowNightModeItem"
+    case requestHideImages = "HideImageModeMenuItem"
+    case requestShowImages = "ShowImageModeMenuItem"
+    // Same comment as above, this case added for completeness
+    case openSettingsOption = "SettingsMenuItem"
 }
