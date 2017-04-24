@@ -13,6 +13,9 @@ private let applicationDidRequestUserNotificationPermissionPrefKey = "applicatio
 
 private let log = Logger.browserLogger
 
+private let verificationPollingInterval = DispatchTimeInterval.seconds(3)
+private let verificationMaxRetries = 100 // Poll every 3 seconds for 5 minutes.
+
 protocol FxAPushLoginDelegate : class {
     func accountLoginDidFail()
 
@@ -202,14 +205,47 @@ class FxALoginHelper {
     }
 
     fileprivate func readyForSyncing() {
-        if let profile = self.profile, let account = account {
-            profile.setAccount(account)
-            // account.advance is idempotent.
-            if  let account = profile.getAccount(), accountVerified! {
-                account.advance()
+        guard let profile = self.profile, let account = self.account else {
+            return loginDidSucceed()
+        }
+
+        profile.setAccount(account)
+
+        awaitVerification()
+        loginDidSucceed()
+    }
+
+    fileprivate func awaitVerification(_ attemptsLeft: Int = verificationMaxRetries) {
+        guard let account = account else {
+            return
+        }
+
+        if attemptsLeft == 0 {
+            return
+        }
+
+        // The only way we can tell if the account has been verified is to 
+        // start a sync. If it works, then yay,
+        account.advance().upon { state in
+            guard state.actionNeeded == .needsVerification else {
+                // Verification has occurred remotely, and we can proceed.
+                // If we're still on the same page, then we can tell the delegates 
+                // again that login has succeeded, but this time it's verification.
+                self.accountVerified = true
+                return self.loginDidSucceed()
+            }
+
+            if account.pushRegistration != nil {
+                // Verification hasn't occurred yet, but we've registered for push 
+                // so we can wait for a push notification in FxAPushMessageHandler.
+                return
+            }
+
+            let queue = DispatchQueue.global(qos: DispatchQoS.background.qosClass)
+            queue.asyncAfter(deadline: DispatchTime.now() + verificationPollingInterval) {
+                self.awaitVerification(attemptsLeft - 1)
             }
         }
-        loginDidSucceed()
     }
 
     fileprivate func loginDidSucceed() {
