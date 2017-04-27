@@ -177,6 +177,7 @@ protocol Profile: class {
     func removeAccount()
     func setAccount(_ account: FirefoxAccount)
     func flushAccount()
+    func accountDidRemoteVerify()
 
     func getClients() -> Deferred<Maybe<[RemoteClient]>>
     func getClientsAndTabs() -> Deferred<Maybe<[ClientAndTabs]>>
@@ -575,6 +576,16 @@ open class BrowserProfile: Profile {
             // Will this cause issues with people migrating?
             self.keychain.set(account.dictionary() as NSCoding, forKey: name + ".account")
         }
+    }
+
+    // This is called after a APNS verification message is received.
+    func accountDidRemoteVerify() {
+        guard account?.actionNeeded == .needsVerification else {
+            return
+        }
+
+        let userInfo = [NotificationUserInfoKeyHasSyncableAccount: true]
+        NotificationCenter.default.post(name: NotificationFirefoxAccountChanged, object: nil, userInfo: userInfo)
     }
 
     // Extends NSObject so we can use timers.

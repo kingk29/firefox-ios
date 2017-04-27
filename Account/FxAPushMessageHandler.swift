@@ -59,7 +59,7 @@ extension FxAPushMessageHandler {
 
     /// The main entry point to the handler for decrypted messages.
     func handle(message json: JSON) -> Success {
-        if !json.isDictionary() {
+        if !json.isDictionary() || json.isEmpty {
             return handleVerification()
         }
 
@@ -95,8 +95,14 @@ extension FxAPushMessageHandler {
             return succeed()
         }
 
-        // If we're verified, we can start syncing.
-        return account.advance().bind { _ in return succeed() }
+        // If we're verified remotely, we can start syncing.
+        let deferred = account.advance().bind { _ in return succeed() }
+
+        // We're not locally verified yet, but go ahead and tell everyone 
+        // we've heard we're verified remotely and that we're syncing now. 
+        profile.accountDidRemoteVerify()
+
+        return deferred
     }
 }
 

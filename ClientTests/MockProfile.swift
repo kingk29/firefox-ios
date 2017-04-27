@@ -211,4 +211,7 @@ open class MockProfile: Profile {
 
     public func sendItems(_ items: [ShareItem], toClients clients: [RemoteClient]) {
     }
+
+    public func accountDidRemoteVerify() {
+    }
 }

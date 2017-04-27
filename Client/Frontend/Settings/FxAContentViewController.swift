@@ -40,10 +40,15 @@ class FxAContentViewController: SettingsContentViewController, WKScriptMessageHa
     init(profile: Profile) {
         self.profile = profile
         super.init(backgroundColor: UIColor(red: 242 / 255.0, green: 242 / 255.0, blue: 242 / 255.0, alpha: 1.0), title: NSAttributedString(string: "Firefox Accounts"))
+        NotificationCenter.default.addObserver(self, selector: #selector(FxAContentViewController.SELdidVerify(_:)), name: NotificationFirefoxAccountChanged, object: nil)
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: NotificationFirefoxAccountChanged, object: nil)
     }
 
     override func viewDidLoad() {
@@ -116,6 +121,20 @@ class FxAContentViewController: SettingsContentViewController, WKScriptMessageHa
         let helper = FxALoginHelper.sharedInstance
         helper.delegate = self
         helper.application(app, didReceiveAccountJSON: data)
+    }
+
+    func SELdidVerify(_ notification: Notification) {
+        guard let account = profile.getAccount() else {
+            return
+        }
+        guard let userInfo = notification.userInfo,
+            let accountVerified = userInfo[NotificationUserInfoKeyHasSyncableAccount] as? Bool,
+            accountVerified else {
+                return
+        }
+        let flags = FxALoginFlags(pushEnabled: account.pushRegistration != nil,
+                                  verified: accountVerified)
+        self.delegate?.contentViewControllerDidSignIn(self, withFlags: flags)
     }
 
     // The content server page is ready to be shown.
