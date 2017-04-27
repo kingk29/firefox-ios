@@ -74,7 +74,7 @@ func getRemoteFrecencySQL() -> String {
     let microsecondsPerDay = 86_400_000_000.0      // 1000 * 1000 * 60 * 60 * 24
     let ageDays = "((\(now) - remoteVisitDate) / \(microsecondsPerDay))"
 
-    return "\(visitCountExpression) * max(1, 100 * 110 / (\(ageDays) * \(ageDays) + 110))"
+    return "\(visitCountExpression)"
 }
 
 func getLocalFrecencySQL() -> String {
@@ -83,7 +83,7 @@ func getLocalFrecencySQL() -> String {
     let microsecondsPerDay = 86_400_000_000.0      // 1000 * 1000 * 60 * 60 * 24
     let ageDays = "((\(now) - localVisitDate) / \(microsecondsPerDay))"
 
-    return "\(visitCountExpression) * max(2, 100 * 225 / (\(ageDays) * \(ageDays) + 225))"
+    return "\(visitCountExpression)"
 }
 
 extension SDRow {
@@ -600,7 +600,7 @@ extension SQLiteHistory: BrowserHistory {
             "sum(localVisitCount) AS localVisitCount,",
             "sum(remoteVisitCount) AS remoteVisitCount,",
             "max(frecency),",
-            "sum(frecency) AS frecencies,",
+            "frecency AS frecencies,",
             "0 AS is_bookmarked",
             "FROM (", frecenciedSQL, ") ",
             groupClause,
@@ -619,11 +619,13 @@ extension SQLiteHistory: BrowserHistory {
                 "view_history_id_favicon ON historyID = view_history_id_favicon.id",
                 "ORDER BY frecencies DESC",
             ].joined(separator: " ")
+            print(historySQL)
+
 
             if !includeBookmarks {
                 return (historyWithIconsSQL, args)
             }
-
+            print(historyWithIconsSQL)
             // Find bookmarks, too.
             // This isn't required by the protocol we're implementing, but we're able to do
             // it because we share storage with bookmarks.
@@ -662,6 +664,7 @@ extension SQLiteHistory: BrowserHistory {
             "GROUP BY url",
             "ORDER BY visitDate DESC LIMIT \(bookmarksLimit)",
         ].joined(separator: " ")
+        print(historySQL)
 
         let allSQL = "SELECT * FROM (SELECT * FROM (\(historySQL)) UNION SELECT * FROM (\(bookmarksSQL))) ORDER BY is_bookmarked DESC, frecencies DESC"
         return (allSQL, args)
